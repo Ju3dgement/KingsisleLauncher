@@ -8,9 +8,9 @@ This project is a work in progress and will keep evolving over time (whenever I 
 
 ## Why it was made
 
-This launcher was inspired by MilkLauncher, a Python-based tool created for launching Wizard101 & Pirate101. While MilkLauncher was a great tool, it didn’t fully meet the needs of my group—between me and a few others, we manage over 15 accounts each, and flexibility became essential.
+This launcher was inspired by MilkLauncher, a Python-based tool created for launching Wizard101 & Pirate101. While MilkLauncher was a great tool, it didnï¿½t fully meet the needs of my groupï¿½between me and a few others, we manage over 15 accounts each, and flexibility became essential.
 
-I needed a solution that allowed precise control, launching only the accounts I needed at any given time. I don’t expect many people—if anyone—to use this, but it exists for those rare weirdos
+I needed a solution that allowed precise control, launching only the accounts I needed at any given time. I donï¿½t expect many peopleï¿½if anyoneï¿½to use this, but it exists for those rare weirdos
 
 ## Top Section
 This is used for single use logins:
@@ -48,4 +48,4 @@ When you launch an account:
 
 UI Preview
 
-![QuickLauncher Screenshot](images/empty.png)
+![QuickLauncher Screenshot](KingsisleLauncher/images/empty.png)
