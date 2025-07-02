@@ -28,6 +28,7 @@ class AutoLaunchWizard101C : public QMainWindow
         QString bundleNickname;
         QString massBundle;
     };
+
 public:
     explicit AutoLaunchWizard101C(QWidget* parent = nullptr);
     ~AutoLaunchWizard101C();
@@ -43,8 +44,6 @@ private:
     void loadPathsFromFile();
     void loadBundlesFromFile();
     void saveBundlesToFile();
-    //void onBundleSelected(const QString& bundleName);
-    //void reloadBundlesFromFile();
     void browseWizardPath();
     void browsePiratePath();
     void savePathsToFile();
@@ -56,9 +55,10 @@ private:
     void spoof();
     void displayTopText();
     void displayMiddleText();
-
     void saveUser();
     void saveBundle();
+    void revealText(QPushButton* button, int index);
+    void loadSettings();
 
     Ui::AutoLaunchWizard101CClass ui;
     QComboBox* accountCombo;
@@ -75,7 +75,6 @@ private:
     QPushButton* bundleLaunchButton;
     QList<AccountInfo> accounts;
     QMap<QString, QStringList> bundleAccounts;
-
     bool spoofActive = false;
 };
 

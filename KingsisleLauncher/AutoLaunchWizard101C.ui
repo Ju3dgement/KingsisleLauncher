@@ -7699,9 +7699,9 @@
      <string>Save</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="SaveUserButton_2">
+   <widget class="QPushButton" name="UsernameReveal">
     <property name="enabled">
-     <bool>false</bool>
+     <bool>true</bool>
     </property>
     <property name="geometry">
      <rect>
@@ -8193,9 +8193,9 @@
      <string>On</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="SaveUserButton_3">
+   <widget class="QPushButton" name="PasswordReveal">
     <property name="enabled">
-     <bool>false</bool>
+     <bool>true</bool>
     </property>
     <property name="geometry">
      <rect>
@@ -8709,8 +8709,8 @@
    <zorder>SpoofButton</zorder>
    <zorder>SaveUserButton</zorder>
    <zorder>SaveBundleButton</zorder>
-   <zorder>SaveUserButton_2</zorder>
-   <zorder>SaveUserButton_3</zorder>
+   <zorder>UsernameReveal</zorder>
+   <zorder>PasswordReveal</zorder>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
  </widget>

@@ -8,13 +8,16 @@
 AutoLaunchWizard101C::AutoLaunchWizard101C(QWidget* parent)
 {
     ui.setupUi(this);
-    setWindowTitle("Ju3dge");
+    setWindowTitle("Ju3dge Launcher");
+    setWindowIcon(QIcon("images/Ju3dge.ico"));
     loadAccountsFromFile();
     loadPathsFromFile();
     loadBundlesFromFile();
+    loadSettings();
+    ui.SaveUserButton->setStyleSheet("background-color: green; color: white;");
+    ui.SaveBundleButton->setStyleSheet("background-color: green; color: white;");
     ui.GameDropbox->addItem("Wizard101");
     ui.GameDropbox->addItem("Pirate101");
-    ui.inputPassword->setEchoMode(QLineEdit::Password);
     connect(ui.AddAccountButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::addAccount);
     connect(ui.DeleteAccountButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::deleteAccount);
     connect(ui.AddBundleButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::addBundleAccount);
@@ -23,18 +26,99 @@ AutoLaunchWizard101C::AutoLaunchWizard101C(QWidget* parent)
     connect(ui.GameDropbox, &QComboBox::currentTextChanged, this, &AutoLaunchWizard101C::gameSelect);
     connect(ui.LaunchButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::launch);
     connect(ui.BundleLaunchButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::bundleLaunch);
-    connect(ui.killAllButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::killAllClients);
+    connect(ui.killAllButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::killAllClients);    
     connect(ui.SpoofButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::spoof);
-    
-    // Display 
     connect(ui.NicknameDropbox, &QComboBox::currentIndexChanged, this, &AutoLaunchWizard101C::displayTopText);
     connect(ui.BundleNicknameDropbox, &QComboBox::currentIndexChanged, this, &AutoLaunchWizard101C::displayMiddleText);
-
     connect(ui.SaveUserButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::saveUser);
     connect(ui.SaveBundleButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::saveBundle);
+    connect(ui.UsernameReveal, &QPushButton::clicked, this, [=]() {revealText(ui.UsernameReveal, 0);});
+    connect(ui.PasswordReveal, &QPushButton::clicked, this, [=]() {revealText(ui.PasswordReveal, 1);});
 }
 
+AutoLaunchWizard101C::~AutoLaunchWizard101C() {}
 
+void AutoLaunchWizard101C::loadSettings() {
+    QFile file("information/settings.txt");
+    if (!file.exists()) {
+        if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            QTextStream out(&file);
+            out << "Off\nOff\n";
+            file.close();
+        }
+    }
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QTextStream in(&file);
+        QString line1 = in.readLine().trimmed();
+        QString line2 = in.readLine().trimmed();
+        file.close();
+
+        if (line1.compare("On", Qt::CaseInsensitive) == 0) {
+            ui.inputUsername->setEchoMode(QLineEdit::Normal);
+            ui.UsernameReveal->setStyleSheet("background-color: red; color: white;");
+            ui.UsernameReveal->setText("Off");
+        }
+        else {
+            ui.inputUsername->setEchoMode(QLineEdit::Password);
+            ui.UsernameReveal->setStyleSheet("background-color: green; color: white;");
+            ui.UsernameReveal->setText("On");
+        }
+
+        if (line2.compare("On", Qt::CaseInsensitive) == 0) {
+            ui.inputPassword->setEchoMode(QLineEdit::Normal);
+            ui.PasswordReveal->setStyleSheet("background-color: red; color: white;");
+            ui.PasswordReveal->setText("Off");
+        }
+        else {
+            ui.inputPassword->setEchoMode(QLineEdit::Password);
+            ui.PasswordReveal->setStyleSheet("background-color: green; color: white;");
+            ui.PasswordReveal->setText("On");
+        }
+    }
+}
+
+void AutoLaunchWizard101C::revealText(QPushButton* button, int index) {
+    QStringList lines;
+    QFile file("information/settings.txt");
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QTextStream in(&file);
+        while (!in.atEnd()) {
+            lines << in.readLine().trimmed();
+        }
+        file.close();
+    }
+
+    while (lines.size() < 2)
+        lines << "Off";
+
+    if (index == 0) {
+        bool isVisible = ui.inputUsername->echoMode() == QLineEdit::Normal;
+        ui.inputUsername->setEchoMode(isVisible ? QLineEdit::Password : QLineEdit::Normal);
+        lines[0] = isVisible ? "Off" : "On";
+    }
+    else if (index == 1) {
+        bool isVisible = ui.inputPassword->echoMode() == QLineEdit::Normal;
+        ui.inputPassword->setEchoMode(isVisible ? QLineEdit::Password : QLineEdit::Normal);
+        lines[1] = isVisible ? "Off" : "On";
+    }
+
+    if (button->text() == "On") {
+        button->setStyleSheet("background-color: red; color: white;");
+        button->setText("Off");
+    }
+    else if (button->text() == "Off"){
+        button->setStyleSheet("background-color: green; color: white;");
+        button->setText("On");
+    }
+
+    if (file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
+        QTextStream out(&file);
+        for (const QString& line : lines)
+            out << line << '\n';
+        file.close();
+    }
+
+}
 
 void AutoLaunchWizard101C::saveBundle() {
     QString currentBundleNickname = ui.BundleNicknameDropbox->currentText();
@@ -57,7 +141,6 @@ void AutoLaunchWizard101C::saveBundle() {
     bundleAccounts.remove(currentBundleNickname);         // Remove old key
     bundleAccounts[bundleNickname] = massNickList;        // Add new/updated one
 
-    // Update bundles.txt
     QFile file("information/bundles.txt");
     QStringList lines;
 
@@ -156,7 +239,6 @@ void AutoLaunchWizard101C::saveUser() {
         ui.NicknameDropbox->setItemText(index, nickname);
         ui.NicknameDropbox->setCurrentIndex(index); // Optionally reselect it
     }
-
     QMessageBox::information(this, "Success", "Account info updated successfully.");
 }
 
@@ -176,7 +258,6 @@ void AutoLaunchWizard101C::displayMiddleText() {
         QMessageBox::warning(this, "Bundle Not Found", QString("No bundle found with nickname: %1").arg(nickname));
     }
 }
-
 
 void AutoLaunchWizard101C::displayTopText() {
     QString nickname = ui.NicknameDropbox->currentText();
@@ -202,8 +283,6 @@ void AutoLaunchWizard101C::displayTopText() {
     ui.inputUsername->setText(currentAccount.username);
     ui.inputPassword->setText(currentAccount.password);
 }
-
-
 
 void AutoLaunchWizard101C::killAllClients() {
     QString targetName = "WizardGraphicalClient.exe";
@@ -482,8 +561,6 @@ void AutoLaunchWizard101C::loadBundlesFromFile() {
     }
 }
 
-AutoLaunchWizard101C::~AutoLaunchWizard101C(){}
-
 void AutoLaunchWizard101C::addAccount()
 {
     QString nickname = ui.inputNickname->text().trimmed();
@@ -505,7 +582,6 @@ void AutoLaunchWizard101C::addAccount()
     AccountInfo newAccount{ nickname, username, password };
     accounts.append(newAccount);
     ui.NicknameDropbox->addItem(nickname);
-    
 
     QFile file("information/info.txt");
     if (file.open(QIODevice::Append | QIODevice::Text)) {
@@ -513,7 +589,6 @@ void AutoLaunchWizard101C::addAccount()
         out << nickname << "/" << username << "/" << password << "\n";
         file.close();
     }
-
     ui.inputNickname->clear();
     ui.inputUsername->clear();
     ui.inputPassword->clear();
