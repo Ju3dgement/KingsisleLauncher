@@ -1,4 +1,4 @@
-// Yes I know this is bad coding format deal with it
+// Yes I know this is bad coding gonna seperate this into seperate classes eventually
 #include "AutoLaunchWizard101C.h"
 #include "ui_AutoLaunchWizard101C.h"
 #include <windows.h>
@@ -23,11 +23,187 @@ AutoLaunchWizard101C::AutoLaunchWizard101C(QWidget* parent)
     connect(ui.GameDropbox, &QComboBox::currentTextChanged, this, &AutoLaunchWizard101C::gameSelect);
     connect(ui.LaunchButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::launch);
     connect(ui.BundleLaunchButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::bundleLaunch);
-
     connect(ui.killAllButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::killAllClients);
     connect(ui.SpoofButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::spoof);
     
+    // Display 
+    connect(ui.NicknameDropbox, &QComboBox::currentIndexChanged, this, &AutoLaunchWizard101C::displayTopText);
+    connect(ui.BundleNicknameDropbox, &QComboBox::currentIndexChanged, this, &AutoLaunchWizard101C::displayMiddleText);
+
+    connect(ui.SaveUserButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::saveUser);
+    connect(ui.SaveBundleButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::saveBundle);
 }
+
+
+
+void AutoLaunchWizard101C::saveBundle() {
+    QString currentBundleNickname = ui.BundleNicknameDropbox->currentText();
+    QString bundleNickname = ui.inputBundleNickname->text().trimmed();
+    QString massNicknames = ui.inputMassNicknames->text().trimmed();
+
+    if (bundleNickname.isEmpty() || massNicknames.isEmpty()) {
+        QMessageBox::warning(this, "Input Error", "Both fields must be filled out before saving");
+        return;
+    }
+
+    // Check if current bundle exists
+    if (!bundleAccounts.contains(currentBundleNickname)) {
+        QMessageBox::warning(this, "Save Failed", "The selected bundle could not be found.");
+        return;
+    }
+
+    // Update in-memory map
+    QStringList massNickList = massNicknames.split('/', Qt::SkipEmptyParts);
+    bundleAccounts.remove(currentBundleNickname);         // Remove old key
+    bundleAccounts[bundleNickname] = massNickList;        // Add new/updated one
+
+    // Update bundles.txt
+    QFile file("information/bundles.txt");
+    QStringList lines;
+
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QMessageBox::critical(this, "File Error", "Failed to open bundles.txt for reading.");
+        return;
+    }
+
+    QTextStream in(&file);
+    while (!in.atEnd()) {
+        QString line = in.readLine();
+        QStringList parts = line.split('=');
+        if (parts.size() == 2 && parts[0] == currentBundleNickname) {
+            // Replace this line with updated nickname and nicknames
+            line = bundleNickname + "=" + massNickList.join("/");
+        }
+        lines.append(line);
+    }
+    file.close();
+
+    // Write updated lines back to the file
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
+        QMessageBox::critical(this, "File Error", "Failed to open bundles.txt for writing.");
+        return;
+    }
+
+    QTextStream out(&file);
+    for (const QString& line : lines) {
+        out << line << "\n";
+    }
+    file.close();
+
+    // Update the dropdown
+    int index = ui.BundleNicknameDropbox->findText(currentBundleNickname);
+    if (index != -1) {
+        ui.BundleNicknameDropbox->setItemText(index, bundleNickname);
+        ui.BundleNicknameDropbox->setCurrentIndex(index);
+    }
+
+    QMessageBox::information(this, "Success", "Bundle info updated successfully.");
+}
+
+void AutoLaunchWizard101C::saveUser() {
+    QString currentAccountNickname = ui.NicknameDropbox->currentText();
+    QString nickname = ui.inputNickname->text().trimmed();
+    QString username = ui.inputUsername->text().trimmed();
+    QString password = ui.inputPassword->text().trimmed();
+
+    if (nickname.isEmpty() || username.isEmpty() || password.isEmpty()) {
+        QMessageBox::warning(this, "Input Error", "All fields must be filled out before saving");
+        return;
+    }
+
+    // Find and update the matching account
+    bool found = false;
+    for (AccountInfo& account : accounts) {
+        if (account.nickname == currentAccountNickname) {
+            account.nickname = nickname;
+            account.username = username;
+            account.password = password;
+
+            QFile file("information/info.txt");
+            if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+                QTextStream out(&file);
+                for (const AccountInfo& acc : accounts) {
+                    out << acc.nickname << "/" << acc.username << "/" << acc.password << "\n";
+                }
+                file.close();
+            }
+            found = true;
+            break;
+        }
+    }
+    if (!found) {
+        QMessageBox::warning(this, "Save Failed", "The selected account could not be found in the list.");
+        return;
+    }
+
+    // update info.txt 
+    QStringList lines;
+    QFile file("information/info.txt");
+    QTextStream in(&file);
+    while (!in.atEnd()) {
+        QString line = in.readLine();
+        QStringList parts = line.split('/');
+        if (parts.size() >= 3 && parts[0] == currentAccountNickname) {
+            line = nickname + "/" + username + "/" + password;  // Replace the line with updated values
+        }
+        lines.append(line);
+    }
+    file.close();
+
+    // update dropbox for new nickname if changed
+    int index = ui.NicknameDropbox->findText(currentAccountNickname);
+    if (index != -1) {
+        ui.NicknameDropbox->setItemText(index, nickname);
+        ui.NicknameDropbox->setCurrentIndex(index); // Optionally reselect it
+    }
+
+    QMessageBox::information(this, "Success", "Account info updated successfully.");
+}
+
+
+void AutoLaunchWizard101C::displayMiddleText() {
+    QString nickname = ui.BundleNicknameDropbox->currentText();
+
+    if (bundleAccounts.contains(nickname)) {
+        ui.inputBundleNickname->setText(nickname);
+        ui.inputMassNicknames->setText(bundleAccounts[nickname].join("/"));
+
+    }
+    else {
+        // Bundle not found
+        ui.inputBundleNickname->clear();
+        ui.inputMassNicknames->clear();
+        QMessageBox::warning(this, "Bundle Not Found", QString("No bundle found with nickname: %1").arg(nickname));
+    }
+}
+
+
+void AutoLaunchWizard101C::displayTopText() {
+    QString nickname = ui.NicknameDropbox->currentText();
+    AccountInfo currentAccount;
+    bool found = false;
+    for (const AccountInfo& account : accounts) {
+        if (account.nickname == nickname) {
+            currentAccount = account;
+            found = true;
+            break;
+        }
+    }
+
+    if (!found) {
+        ui.inputNickname->clear();
+        ui.inputUsername->clear();
+        ui.inputPassword->clear();
+        QMessageBox::warning(this, "Account Not Found", QString("No account found with nickname: %1").arg(nickname));
+        return;
+    }
+
+    ui.inputNickname->setText(currentAccount.nickname);
+    ui.inputUsername->setText(currentAccount.username);
+    ui.inputPassword->setText(currentAccount.password);
+}
+
+
 
 void AutoLaunchWizard101C::killAllClients() {
     QString targetName = "WizardGraphicalClient.exe";
@@ -83,34 +259,47 @@ void AutoLaunchWizard101C::spoof() {
     }
 }
 void AutoLaunchWizard101C::launchAccount(const AccountInfo& selectedAccount, const QString& game) {
-    QString exePath = (game == "Wizard101") ? wizardPath : piratePath;
+    QString exePathFixed = (game == "Wizard101") ? wizardPath : piratePath;
+    if (!exePathFixed.endsWith("/Bin", Qt::CaseInsensitive)) {
+        exePathFixed += "/Bin";
+    }
     QString exeName = (game == "Wizard101") ? "WizardGraphicalClient.exe" : "Pirate.exe";
-    QString fullPath = exePath + "/Bin/" + exeName;
-    QString nickname = selectedAccount.nickname;
+    QString fullPath = exePathFixed + "/" + exeName;
+
+    if (!QFile::exists(fullPath)) {
+        QMessageBox::warning(this, "Launch Failed", QString("Game executable not found at:\n%1").arg(fullPath));
+        return;
+    }
+
+    QString cmd = QString("\"%1\" -L login.us.%2.com 12000").arg(fullPath, game.toLower());
 
     QtConcurrent::run([=]() {
         STARTUPINFOW si = { sizeof(si) };
         PROCESS_INFORMATION pi;
-        QString cmd = QString("\"%1\" -L login.us.%2.com 12000").arg(fullPath, game.toLower());
 
-        if (!CreateProcessW(nullptr,
+        BOOL success = CreateProcessW(
+            nullptr,
             (LPWSTR)cmd.utf16(),
             nullptr,
             nullptr,
             FALSE,
             0,
             nullptr,
-            (LPCWSTR)(exePath + "/Bin").utf16(),
+            (LPCWSTR)exePathFixed.utf16(),
             &si,
-            &pi)) {
+            &pi
+        );
+
+        if (!success) {
             QMetaObject::invokeMethod(this, [=]() {
-                QMessageBox::warning(this, "Launch Failed", QString("Could not launch client for %1.").arg(nickname));
+                QMessageBox::warning(this, "Launch Failed", QString("Could not launch client for %1.").arg(selectedAccount.nickname));
                 }, Qt::QueuedConnection);
             return;
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(10000));
         HWND hwnd = nullptr;
+        //  window by title
         for (int i = 0; i < 50 && hwnd == nullptr; ++i) {
             hwnd = FindWindowW(nullptr, (LPCWSTR)game.utf16());
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -120,13 +309,23 @@ void AutoLaunchWizard101C::launchAccount(const AccountInfo& selectedAccount, con
         CloseHandle(pi.hThread);
 
         if (hwnd) {
-            for (QChar c : selectedAccount.username) SendMessageW(hwnd, WM_CHAR, c.unicode(), 0);
-            SendMessageW(hwnd, WM_CHAR, 9, 0);
-            for (QChar c : selectedAccount.password) SendMessageW(hwnd, WM_CHAR, c.unicode(), 0);
-            SendMessageW(hwnd, WM_CHAR, 13, 0);
+            for (QChar character : selectedAccount.username)
+                SendMessageW(hwnd, WM_CHAR, character.unicode(), 0); // username
 
-            std::wstring windowTitle = nickname.toStdWString() + game.toStdWString();
+            SendMessageW(hwnd, WM_CHAR, 9, 0); // Tab
+
+            for (QChar character : selectedAccount.password)
+                SendMessageW(hwnd, WM_CHAR, character.unicode(), 0); // password
+
+            SendMessageW(hwnd, WM_CHAR, 13, 0); // Enter
+
+            std::wstring windowTitle = selectedAccount.nickname.toStdWString() + game.toStdWString();
             SetWindowTextW(hwnd, windowTitle.c_str());
+        }
+        else {
+            QMetaObject::invokeMethod(this, [=]() {
+                QMessageBox::warning(this, "Window Not Found", QString("Could not find game window %1 after launch.").arg(selectedAccount.nickname));
+                }, Qt::QueuedConnection);
         }
         });
 }
@@ -135,31 +334,30 @@ void AutoLaunchWizard101C::launch() {
     QString nickname = ui.NicknameDropbox->currentText();
     if (nickname.isEmpty()) return;
 
-    auto it = std::find_if(accounts.begin(), accounts.end(), [&](const AccountInfo& a) {
+    auto findCreds = std::find_if(accounts.begin(), accounts.end(), [&](const AccountInfo& a) {
         return a.nickname == nickname;
         });
 
-    if (it == accounts.end()) return;
+    if (findCreds == accounts.end()) return;
 
     QString game = ui.GameDropbox->currentText();
-    launchAccount(*it, game);
+    launchAccount(*findCreds, game);
 }
 
 void AutoLaunchWizard101C::bundleLaunch() {
     QString bundleName = ui.BundleNicknameDropbox->currentText();
     if (bundleName.isEmpty() || !bundleAccounts.contains(bundleName)) return;
 
-    QString game = ui.GameDropbox->currentText();  // use current dropdown selection
-
+    QString game = ui.GameDropbox->currentText(); 
     const QStringList& nicknames = bundleAccounts[bundleName];
 
     for (const QString& nick : nicknames) {
-        auto it = std::find_if(accounts.begin(), accounts.end(), [&](const AccountInfo& a) {
+        auto findCreds = std::find_if(accounts.begin(), accounts.end(), [&](const AccountInfo& a) {
             return a.nickname == nick;
             });
-        if (it != accounts.end()) {
-            launchAccount(*it, game); // launch each in its own thread
-            std::this_thread::sleep_for(std::chrono::milliseconds(500)); // optional: stagger launches
+        if (findCreds != accounts.end()) {
+			launchAccount(*findCreds, game);
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // stagger launches
         }
     }
 }
@@ -169,8 +367,6 @@ void AutoLaunchWizard101C::browse(){
         browseWizardPath();
     } else if (ui.GameDropbox->currentText() == "Pirate101") {
         browsePiratePath();
-    } else {
-		QMessageBox::warning(this, "Error", "How did you get this error?");
     }
 }
 
@@ -198,13 +394,11 @@ void AutoLaunchWizard101C::gameSelect() {
 		ui.Wizard101PathLabel->setText("Wizard101 Path");
         ui.inputWizardPath->setText(wizardPath);
 
-
     } else if (game == "Pirate101") {
         ui.Wizard101PathLabel->setText("Pirate101 Path");
         ui.inputWizardPath->setText(piratePath);
 	}
 }
-
 
 void AutoLaunchWizard101C::savePathsToFile() {
     QFile file("information/path.txt");
@@ -214,64 +408,6 @@ void AutoLaunchWizard101C::savePathsToFile() {
         out << piratePath.trimmed() << "\n";
         file.close();
     }
-}
-
-
-void AutoLaunchWizard101C::onBundleSelected(const QString& bundleName) {
-    if (bundleName.isEmpty()) {
-        bundleMassNicknamesEdit->clear();
-        bundleNicknameEdit->clear();
-        return;
-    }
-
-    // Reload bundles from file to get freshest data
-    reloadBundlesFromFile();
-
-    if (bundleAccounts.contains(bundleName)) {
-        bundleMassNicknamesEdit->setText(bundleAccounts[bundleName].join("/"));
-        bundleNicknameEdit->setText(bundleName);
-    }
-    else {
-        bundleMassNicknamesEdit->clear();
-        bundleNicknameEdit->clear();
-    }
-}
-
-void AutoLaunchWizard101C::reloadBundlesFromFile() {
-    QFile file("information/bundles.txt");
-    QMap<QString, QStringList> newBundles;
-    if (!file.exists()) return;
-
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        QTextStream in(&file);
-        while (!in.atEnd()) {
-            QString line = in.readLine().trimmed();
-            if (line.isEmpty()) continue;
-
-            QStringList parts = line.split('=');
-            if (parts.size() != 2) continue;
-
-            QString bundleName = parts[0].trimmed();
-            QStringList names = parts[1].split("/", Qt::SkipEmptyParts);
-
-            newBundles[bundleName] = names;
-        }
-        file.close();
-    }
-
-    bundleAccounts = newBundles;
-
-    // Update the combo box items silently:
-    QString current = bundleCombo->currentText();
-    bundleCombo->blockSignals(true);
-    bundleCombo->clear();
-    for (auto it = bundleAccounts.begin(); it != bundleAccounts.end(); ++it) {
-        bundleCombo->addItem(it.key());
-    }
-    int idx = bundleCombo->findText(current);
-    if (idx >= 0)
-        bundleCombo->setCurrentIndex(idx);
-    bundleCombo->blockSignals(false);
 }
 
 void AutoLaunchWizard101C::loadAccountsFromFile() {
@@ -297,11 +433,6 @@ void AutoLaunchWizard101C::loadAccountsFromFile() {
         }
     }
     file.close();
-
-    //if (!accounts.isEmpty()) {
-    //    accountCombo->setCurrentIndex(0);
-    //    onAccountSelected(0);
-    //}
 }
 
 void AutoLaunchWizard101C::loadPathsFromFile() {
@@ -310,12 +441,11 @@ void AutoLaunchWizard101C::loadPathsFromFile() {
         QFile newFile("information/path.txt");
         if (newFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
             QTextStream out(&newFile);
-            out << "C:/ProgramData/KingsIsle Entertainment/Wizard101/\n";
-            out << "C:/ProgramData/KingsIsle Entertainment/Pirate101/\n";
+            out << "C:/ProgramData/KingsIsle Entertainment/Wizard101/Bin\n";
+            out << "C:/ProgramData/KingsIsle Entertainment/Pirate101/Bin\n";
             newFile.close();
         }
     }
-
     if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QTextStream in(&file);
         QString wizard = in.readLine().trimmed();
@@ -323,7 +453,6 @@ void AutoLaunchWizard101C::loadPathsFromFile() {
         ui.inputWizardPath->setText(wizard.isEmpty() ? "C:/..." : wizard);
         wizardPath = wizard;
         piratePath = pirate;
-        //ui.Wizard101PathLabel->setText(pirate.isEmpty() ? "C:/..." : pirate);
         file.close();
     }
 }
@@ -346,7 +475,6 @@ void AutoLaunchWizard101C::loadBundlesFromFile() {
 
             if (!bundleAccounts.contains(bundleName)) {
                 bundleAccounts[bundleName] = names;
-                //bundleCombo->addItem(bundleName);
                 ui.BundleNicknameDropbox->addItem(bundleName);
             }
         }
@@ -384,7 +512,6 @@ void AutoLaunchWizard101C::addAccount()
         QTextStream out(&file);
         out << nickname << "/" << username << "/" << password << "\n";
         file.close();
-        //ui->logOutput->append("Account added: " + nickname);
     }
 
     ui.inputNickname->clear();
@@ -411,7 +538,6 @@ void AutoLaunchWizard101C::deleteAccount()
             out << acc.nickname << "/" << acc.username << "/" << acc.password << "\n";
         }
         file.close();
-        //ui->logOutput->append("Deleted account: " + removedName);
     }
 
     if (!accounts.isEmpty()) {
@@ -450,10 +576,8 @@ void AutoLaunchWizard101C::addBundleAccount() {
             return;
         }
     }
-
     bundleAccounts[nickname] = nicknames;
     ui.BundleNicknameDropbox->addItem(nickname);
-    //logOutput->append("Bundle added: " + nickname);
     saveBundlesToFile();
 }
 
@@ -468,8 +592,6 @@ void AutoLaunchWizard101C::deleteBundleAccount() {
     int index = ui.BundleNicknameDropbox->findText(bundle);
     if (index >= 0)
         ui.BundleNicknameDropbox->removeItem(index);
-
-    //logOutput->append("Bundle deleted: " + bundle);
     saveBundlesToFile();
 }
 

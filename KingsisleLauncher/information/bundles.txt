@@ -1,1 +1,0 @@
-HittingTeam=StormHitter1/StormHitter2/FireHitter

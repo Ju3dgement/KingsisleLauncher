@@ -24,6 +24,10 @@ class AutoLaunchWizard101C : public QMainWindow
         QString password;
     };
 
+    struct BundleInfo {
+        QString bundleNickname;
+        QString massBundle;
+    };
 public:
     explicit AutoLaunchWizard101C(QWidget* parent = nullptr);
     ~AutoLaunchWizard101C();
@@ -39,8 +43,8 @@ private:
     void loadPathsFromFile();
     void loadBundlesFromFile();
     void saveBundlesToFile();
-    void onBundleSelected(const QString& bundleName);
-    void reloadBundlesFromFile();
+    //void onBundleSelected(const QString& bundleName);
+    //void reloadBundlesFromFile();
     void browseWizardPath();
     void browsePiratePath();
     void savePathsToFile();
@@ -48,17 +52,21 @@ private:
     void gameSelect();
     void launch();
     void bundleLaunch();
-    
     void killAllClients();
     void spoof();
+    void displayTopText();
+    void displayMiddleText();
+
+    void saveUser();
+    void saveBundle();
 
     Ui::AutoLaunchWizard101CClass ui;
     QComboBox* accountCombo;
     QLineEdit* nicknameEdit;
     QLineEdit* usernameEdit;
     QLineEdit* passwordEdit;
-    QString wizardPath; // 
-    QString piratePath; // 
+    QString wizardPath; 
+    QString piratePath; 
     QWidget* wizardPathWidget;
     QWidget* piratePathWidget;
     QComboBox* bundleCombo;
