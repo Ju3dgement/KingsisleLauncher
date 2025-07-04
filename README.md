@@ -5,7 +5,7 @@ https://doc.qt.io/qt-6/get-and-install-qt.html
 
 ## What is this project
 
-The Wizard101 launcher launcher as both a file integrity checker and an update manager, requiring users to log in to each account sequentially. 
+The Wizard101 launcher has both a file integrity checker and an update manager, requiring users to log in to each account sequentially. 
 This ends up being pretty slow—usually around three minutes per account which adds up quickly if you’re trying to run multiple accounts.
 
 The game executable (WizardGraphicalClient.exe) expects to be launched this way. 
@@ -29,7 +29,6 @@ This project is a work in progress and will keep evolving over time (whenever I 
 This launcher was inspired by MilkLauncher, a Python-based tool created for launching Wizard101 & Pirate101. 
 While MilkLauncher was a great tool, it didn't fully meet the needs of my group and a few others. 
 We needed a solution that only launched the accounts I needed at any given time. 
-I don't expect many people if anyone'to use this, but it exists for this scenario.
 
 ## Top Section
 This is used for single use login per account:

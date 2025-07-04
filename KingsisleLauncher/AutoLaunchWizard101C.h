@@ -14,6 +14,9 @@
 #include <QFile>
 #include <QTextStream>
 #include <algorithm>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
 
 class AutoLaunchWizard101C : public QMainWindow
 {
@@ -60,6 +63,10 @@ private:
     void revealText(QPushButton* button, int index);
     void loadSettings();
 
+    void saveJson();
+    void loadJson();
+    
+    QJsonObject jsonData;
     Ui::AutoLaunchWizard101CClass ui;
     QComboBox* accountCombo;
     QLineEdit* nicknameEdit;

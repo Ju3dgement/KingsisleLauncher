@@ -1,0 +1,14 @@
+{
+    "accounts": [
+    ],
+    "bundles": {
+    },
+    "paths": {
+        "pirate": "C:/ProgramData/KingsIsle Entertainment/Pirate101/Bin",
+        "wizard": "C:/ProgramData/KingsIsle Entertainment/Wizard101/Bin"
+    },
+    "settings": [
+        "Off",
+        "Off"
+    ]
+}
