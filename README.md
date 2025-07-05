@@ -76,7 +76,6 @@ When you launch an account with the program:
 ## Work in Progress
 This project is a work in progress and will keep evolving over time (whenever I feel like it). Features are being added and changed on the fly, with only the client launcher working as of 04/05/2025
 
-UI Preview
 ![QuickLauncher Picture](KingsisleLauncher/images/emptySS.png)
 
 ![QuickLauncher Picture](KingsisleLauncher/images/full.png)

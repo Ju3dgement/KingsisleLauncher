@@ -17,32 +17,23 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
-
+#include <windows.h>
+#include <QtConcurrent/qtconcurrentrun.h>
+#include <TlHelp32.h>
+#include "AccountInfo.h"
 class AutoLaunchWizard101C : public QMainWindow
 {
     Q_OBJECT
-    struct AccountInfo {
-        QString nickname;
-        QString username;
-        QString password;
-    };
-
-    struct BundleInfo {
-        QString bundleNickname;
-        QString massBundle;
-    };
 
 public:
     explicit AutoLaunchWizard101C(QWidget* parent = nullptr);
     ~AutoLaunchWizard101C();
+    void saveJson();
+    void loadJson();
+    void showStyledWarning(QWidget* parent, const QString& title, const QString& text, bool warningIcon);
     
 private:
-    void addAccount();
-    void deleteAccount();
-	void addBundleAccount();
-	void deleteBundleAccount();
     void launchAccount(const AccountInfo& selectedAccount, const QString& game);
-    void onAccountSelected(int index);
     void loadAccountsFromFile();
     void loadPathsFromFile();
     void loadBundlesFromFile();
@@ -56,15 +47,10 @@ private:
     void bundleLaunch();
     void killAllClients();
     void spoof();
-    void displayTopText();
-    void displayMiddleText();
-    void saveUser();
-    void saveBundle();
     void revealText(QPushButton* button, int index);
     void loadSettings();
+    void changedText(int index);
 
-    void saveJson();
-    void loadJson();
     
     QJsonObject jsonData;
     Ui::AutoLaunchWizard101CClass ui;

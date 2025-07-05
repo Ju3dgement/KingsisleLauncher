@@ -1,17 +1,18 @@
-// Yes I know this is bad coding gonna seperate this into seperate classes eventually
 #include "AutoLaunchWizard101C.h"
 #include "ui_AutoLaunchWizard101C.h"
-#include <windows.h>
-#include <QtConcurrent/qtconcurrentrun.h>
-#include <TlHelp32.h>
+#include "AccountManager.h"
+#include "BundleManager.h"
 
 AutoLaunchWizard101C::AutoLaunchWizard101C(QWidget* parent)
 {
     ui.setupUi(this);
     setWindowTitle("Ju3dge Launcher");
     setWindowIcon(QIcon("images/Ju3dge.ico"));
+
     ui.GameDropbox->addItem("Wizard101");
     ui.GameDropbox->addItem("Pirate101");
+    ui.SaveUserButton->hide();
+    ui.SaveBundleButton->hide();
     loadAccountsFromFile();
     loadPathsFromFile();
     loadBundlesFromFile();
@@ -19,104 +20,113 @@ AutoLaunchWizard101C::AutoLaunchWizard101C(QWidget* parent)
     ui.inputWizardPath->setReadOnly(true);
     ui.SaveUserButton->setStyleSheet("background-color: green; color: white;");
     ui.SaveBundleButton->setStyleSheet("background-color: green; color: white;");
-    connect(ui.AddAccountButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::addAccount);
-    connect(ui.DeleteAccountButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::deleteAccount);
-    connect(ui.AddBundleButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::addBundleAccount);
-    connect(ui.DeleteBundleButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::deleteBundleAccount);
+
+    // Top section
+    AccountManager* accountManager = new AccountManager(&ui, &accounts, &jsonData, this);
+    connect(ui.AddAccountButton, &QPushButton::clicked, accountManager, &AccountManager::addAccount);
+    connect(ui.DeleteAccountButton, &QPushButton::clicked, accountManager, &AccountManager::deleteAccount);
+    connect(ui.SaveUserButton, &QPushButton::clicked, accountManager, &AccountManager::saveUser);
+    connect(ui.NicknameDropbox, &QComboBox::activated, accountManager, &AccountManager::displayTopText);
+
+	// Middle section
+	BundleManager* bundleManager = new BundleManager(&ui, &bundleAccounts, &jsonData, &accounts, this);
+    connect(ui.AddBundleButton, &QPushButton::clicked, bundleManager, &BundleManager::addBundleAccount);
+    connect(ui.DeleteBundleButton, &QPushButton::clicked, bundleManager, &BundleManager::deleteBundleAccount);
+    connect(ui.SaveBundleButton, &QPushButton::clicked, bundleManager, &BundleManager::saveBundle);
+    connect(ui.BundleNicknameDropbox, &QComboBox::activated, bundleManager, &BundleManager::displayMiddleText);
+
+
+
     connect(ui.BrowseButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::browse);
     connect(ui.LaunchButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::launch);
     connect(ui.BundleLaunchButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::bundleLaunch);
     connect(ui.killAllButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::killAllClients);    
     connect(ui.SpoofButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::spoof);
-
     connect(ui.GameDropbox, &QComboBox::activated, this, &AutoLaunchWizard101C::gameSelect);
-    connect(ui.NicknameDropbox, &QComboBox::activated, this, &AutoLaunchWizard101C::displayTopText);
-    connect(ui.BundleNicknameDropbox, &QComboBox::activated, this, &AutoLaunchWizard101C::displayMiddleText);
-
-    connect(ui.SaveUserButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::saveUser);
-    connect(ui.SaveBundleButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::saveBundle);
     connect(ui.UsernameReveal, &QPushButton::clicked, this, [=]() {revealText(ui.UsernameReveal, 0);});
     connect(ui.PasswordReveal, &QPushButton::clicked, this, [=]() {revealText(ui.PasswordReveal, 1);});
+    connect(ui.inputNickname, &QLineEdit::textChanged, this, [=]() {changedText(0);});
+    connect(ui.inputUsername, &QLineEdit::textChanged, this, [=]() {changedText(0);});
+    connect(ui.inputPassword, &QLineEdit::textChanged, this, [=]() {changedText(0);});
+    connect(ui.inputNickname, &QLineEdit::textChanged, this, [=]() {changedText(1);});
+    connect(ui.inputMassNicknames, &QLineEdit::textChanged, this, [=]() {changedText(1);});
+}
+
+void AutoLaunchWizard101C::changedText(int index) {
+    if (index == 0) {
+        QString nickname = ui.inputNickname->text().trimmed();
+        QString username = ui.inputUsername->text().trimmed();
+        QString password = ui.inputPassword->text().trimmed();
+
+        loadJson();
+        QJsonArray accs = jsonData["accounts"].toArray();
+        bool matchFound = false;
+
+        for (const QJsonValue& val : accs) {
+            QJsonObject obj = val.toObject();
+            if (obj["nickname"].toString() == nickname) {
+                matchFound = true;
+                QString storedUsername = obj["username"].toString();
+                QString storedPassword = obj["password"].toString();
+
+                if (storedUsername != username || storedPassword != password) {
+                    ui.SaveUserButton->show();
+                }
+                else {
+                    ui.SaveUserButton->hide();
+                }
+                break;
+            }
+        }
+
+        if (!matchFound) {
+            ui.SaveUserButton->show();
+        }
+    }
+    else if (index == 1) {
+        QString bundleNickname = ui.inputBundleNickname->text().trimmed();
+        QString massNicknames = ui.inputMassNicknames->text().trimmed();
+
+        loadJson();
+        QJsonObject bundlesObj = jsonData["bundles"].toObject();
+        bool matchFound = false;
+
+        if (bundlesObj.contains(bundleNickname)) {
+            matchFound = true;
+            QJsonArray storedArray = bundlesObj[bundleNickname].toArray();
+            QStringList storedList;
+            for (const QJsonValue& val : storedArray)
+                storedList.append(val.toString());
+
+            QString storedMassNicknames = storedList.join("/");
+
+            if (storedMassNicknames != massNicknames) {
+                ui.SaveBundleButton->show();
+            }
+            else {
+                ui.SaveBundleButton->hide();
+            }
+        }
+
+        if (!matchFound) {
+            ui.SaveBundleButton->show();
+        }
+    }
 }
 
 AutoLaunchWizard101C::~AutoLaunchWizard101C() {}
 
-void AutoLaunchWizard101C::saveBundle() {
-    QString currentBundleNickname = ui.BundleNicknameDropbox->currentText();
-    QString bundleNickname = ui.inputBundleNickname->text().trimmed();
-    QString massNicknames = ui.inputMassNicknames->text().trimmed();
-
-    if (bundleNickname.isEmpty() || massNicknames.isEmpty()) {
-        QMessageBox::warning(this, "Input Error", "Both fields must be filled out before saving");
-        return;
-    }
-
-    loadJson();
-
-    QJsonObject bundlesObj = jsonData["bundles"].toObject();
-    if (!bundlesObj.contains(currentBundleNickname)) {
-        QMessageBox::warning(this, "Save Failed", "The selected bundle could not be found.");
-        return;
-    }
-
-    QStringList massNickList = massNicknames.split('/', Qt::SkipEmptyParts);
-    bundlesObj.remove(currentBundleNickname);
-
-    QJsonArray newNickArray;
-    for (const QString& nick : massNickList)
-        newNickArray.append(nick);
-
-    bundlesObj[bundleNickname] = newNickArray;
-    jsonData["bundles"] = bundlesObj;
-    saveJson(); 
-    bundleAccounts.remove(currentBundleNickname);
-    bundleAccounts[bundleNickname] = massNickList;
-
-    int index = ui.BundleNicknameDropbox->findText(currentBundleNickname);
-    if (index != -1) {
-        ui.BundleNicknameDropbox->setItemText(index, bundleNickname);
-        ui.BundleNicknameDropbox->setCurrentIndex(index);
-    }
-
-    QMessageBox::information(this, "Success", "Bundle info updated successfully.");
-}
-
-
-void AutoLaunchWizard101C::displayMiddleText() {
-    QString nickname = ui.BundleNicknameDropbox->currentText();
-
-    if (bundleAccounts.contains(nickname)) {
-        ui.inputBundleNickname->setText(nickname);
-        ui.inputMassNicknames->setText(bundleAccounts[nickname].join("/"));
-    }
-    else {
-        ui.inputBundleNickname->clear();
-        ui.inputMassNicknames->clear();
-    }
-}
-
-void AutoLaunchWizard101C::displayTopText() {
-    QString nickname = ui.NicknameDropbox->currentText();
-    AccountInfo currentAccount;
-    bool found = false;
-    for (const AccountInfo& account : accounts) {
-        if (account.nickname == nickname) {
-            currentAccount = account;
-            found = true;
-            break;
-        }
-    }
-
-    if (!found) {
-        ui.inputNickname->clear();
-        ui.inputUsername->clear();
-        ui.inputPassword->clear();
-        return;
-    }
-
-    ui.inputNickname->setText(currentAccount.nickname);
-    ui.inputUsername->setText(currentAccount.username);
-    ui.inputPassword->setText(currentAccount.password);
+void AutoLaunchWizard101C::showStyledWarning(QWidget* parent, const QString& title, const QString& text, bool warningIcon) {
+    QMessageBox msgBox(parent);
+    if (warningIcon) {
+        msgBox.setIcon(QMessageBox::Warning);  // warning icon
+    } else {
+        msgBox.setIcon(QMessageBox::Information);  // info icon
+	}
+    msgBox.setWindowTitle(title);
+    msgBox.setText(text);
+    msgBox.setStyleSheet("QLabel { color: white; }"); 
+    msgBox.exec();
 }
 
 void AutoLaunchWizard101C::killAllClients() {
@@ -314,62 +324,6 @@ void AutoLaunchWizard101C::gameSelect() {
 	}
 }
 
-void AutoLaunchWizard101C::addBundleAccount() {
-    QString nickname = ui.inputBundleNickname->text().trimmed();
-    QString massNick = ui.inputMassNicknames->text().trimmed();
-
-    if (nickname.isEmpty() || massNick.isEmpty()) {
-        QMessageBox::warning(this, "Input Error", "Both fields must be filled.");
-        return;
-    }
-
-    if (bundleAccounts.contains(nickname)) {
-        QMessageBox::warning(this, "Duplicate", "Bundle nickname already exists.");
-        return;
-    }
-
-    QStringList nicknames = massNick.split("/", Qt::SkipEmptyParts);
-    for (QString& name : nicknames) {
-        name = name.trimmed();
-        bool exists = std::any_of(accounts.begin(), accounts.end(), [&](const AccountInfo& acc) {
-            return acc.nickname == name;
-            });
-        if (!exists) {
-            QMessageBox::warning(this, "Invalid Nickname", "Nickname not found: " + name);
-            return;
-        }
-    }
-    bundleAccounts[nickname] = nicknames;
-    ui.BundleNicknameDropbox->addItem(nickname);
-    saveBundlesToFile();
-}
-
-void AutoLaunchWizard101C::deleteBundleAccount() {
-    QString bundle = ui.BundleNicknameDropbox->currentText();
-    if (!bundleAccounts.contains(bundle)) {
-        QMessageBox::warning(this, "Error", "No such bundle.");
-        return;
-    }
-
-	bundleAccounts.remove(bundle);
-    int index = ui.BundleNicknameDropbox->findText(bundle);
-    if (index >= 0)
-        ui.BundleNicknameDropbox->removeItem(index);
-    saveBundlesToFile();
-}
-
-void AutoLaunchWizard101C::onAccountSelected(int index)
-{
-    if (index >= 0 && index < accounts.size()) {
-        const AccountInfo& acc = accounts[index];
-        ui.inputNickname->setText(acc.nickname);
-        ui.inputUsername->setText(acc.username);
-        ui.inputPassword->setText(acc.password);
-    }
-}
-
-// =======================================================================================================
-
 void AutoLaunchWizard101C::loadJson() {
     QFile file("information/data.json");
     if (!file.exists()) {
@@ -409,113 +363,6 @@ void AutoLaunchWizard101C::loadAccountsFromFile() {
     }
 }
 
-void AutoLaunchWizard101C::saveUser() {
-    QString current = ui.NicknameDropbox->currentText();
-    QString nick = ui.inputNickname->text().trimmed();
-    QString user = ui.inputUsername->text().trimmed();
-    QString pass = ui.inputPassword->text().trimmed();
-
-    if (nick.isEmpty() || user.isEmpty() || pass.isEmpty()) {
-        QMessageBox::warning(this, "Input Error", "All fields must be filled out before saving");
-        return;
-    }
-
-    QJsonArray accs = jsonData["accounts"].toArray();
-    for (int i = 0; i < accs.size(); ++i) {
-        QJsonObject obj = accs[i].toObject();
-        if (obj["nickname"].toString() == current) {
-            obj["nickname"] = nick;
-            obj["username"] = user;
-            obj["password"] = pass;
-            accs[i] = obj;
-            jsonData["accounts"] = accs;
-            saveJson();
-
-            for (AccountInfo& acc : accounts) {
-                if (acc.nickname == current) {
-                    acc.nickname = nick;
-                    acc.username = user;
-                    acc.password = pass;
-                    break;
-                }
-            }
-
-            int index = ui.NicknameDropbox->findText(current);
-            if (index != -1) {
-                ui.NicknameDropbox->setItemText(index, nick);
-                ui.NicknameDropbox->setCurrentIndex(index);
-            }
-            QMessageBox::information(this, "Success", "Account info updated successfully.");
-            return;
-        }
-    }
-    QMessageBox::warning(this, "Save Failed", "The selected account could not be found in the list.");
-}
-
-void AutoLaunchWizard101C::addAccount() {
-    QString nick = ui.inputNickname->text().trimmed();
-    QString user = ui.inputUsername->text().trimmed();
-    QString pass = ui.inputPassword->text().trimmed();
-
-    if (nick.isEmpty() || user.isEmpty() || pass.isEmpty()) {
-        QMessageBox::warning(this, "Input Error", "All fields must be filled out.");
-        return;
-    }
-
-    for (const AccountInfo& acc : accounts) {
-        if (acc.nickname == nick) {
-            QMessageBox::warning(this, "Duplicate", "Nickname already exists.");
-            return;
-        }
-    }
-
-    QJsonObject obj;
-    obj["nickname"] = nick;
-    obj["username"] = user;
-    obj["password"] = pass;
-
-    QJsonArray accs = jsonData["accounts"].toArray();
-    accs.append(obj);
-    jsonData["accounts"] = accs;
-    saveJson();
-
-    accounts.append({ nick, user, pass });
-    ui.NicknameDropbox->addItem(nick);
-    ui.inputNickname->clear();
-    ui.inputUsername->clear();
-    ui.inputPassword->clear();
-}
-
-void AutoLaunchWizard101C::deleteAccount() {
-    int index = ui.NicknameDropbox->currentIndex();
-    if (index < 0 || index >= accounts.size()) {
-        QMessageBox::warning(this, "Delete Error", "No account selected.");
-        return;
-    }
-
-    QString nick = accounts[index].nickname;
-    QJsonArray accs = jsonData["accounts"].toArray();
-    QJsonArray updated;
-    for (const QJsonValue& val : accs) {
-        if (val.toObject()["nickname"].toString() != nick)
-            updated.append(val);
-    }
-    jsonData["accounts"] = updated;
-    saveJson();
-
-    accounts.removeAt(index);
-    ui.NicknameDropbox->removeItem(index);
-    if (!accounts.isEmpty()) {
-        ui.NicknameDropbox->setCurrentIndex(0);
-        onAccountSelected(0);
-    }
-    else {
-        ui.inputNickname->clear();
-        ui.inputUsername->clear();
-        ui.inputPassword->clear();
-    }
-}
-
 void AutoLaunchWizard101C::loadPathsFromFile() {
     QJsonObject paths = jsonData["paths"].toObject();
     wizardPath = paths["wizard"].toString();
@@ -549,18 +396,6 @@ void AutoLaunchWizard101C::loadBundlesFromFile() {
         bundleAccounts[key] = nicks;
         ui.BundleNicknameDropbox->addItem(key);
     }
-}
-
-void AutoLaunchWizard101C::saveBundlesToFile() {
-    QJsonObject bundles;
-    for (auto it = bundleAccounts.begin(); it != bundleAccounts.end(); ++it) {
-        QJsonArray array;
-        for (const QString& nick : it.value())
-            array.append(nick);
-        bundles[it.key()] = array;
-    }
-    jsonData["bundles"] = bundles;
-    saveJson();
 }
 
 void AutoLaunchWizard101C::loadSettings() {
