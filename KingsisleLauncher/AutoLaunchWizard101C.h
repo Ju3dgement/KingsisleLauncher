@@ -69,9 +69,6 @@ private:
     QJsonObject jsonData;
     Ui::AutoLaunchWizard101CClass ui;
     QComboBox* accountCombo;
-    QLineEdit* nicknameEdit;
-    QLineEdit* usernameEdit;
-    QLineEdit* passwordEdit;
     QString wizardPath; 
     QString piratePath; 
     QWidget* wizardPathWidget;
