@@ -1,6 +1,4 @@
-#include "AccountManager.h"
-#include <QMessageBox>
-#include <QJsonArray>
+#include "topSection.h"
 
 AccountManager::AccountManager(Ui::AutoLaunchWizard101CClass* uiPtr, QList<AccountInfo>* accountsPtr, QJsonObject* jsonPtr, AutoLaunchWizard101C* parent)
     : ui(uiPtr), accounts(accountsPtr), jsonData(jsonPtr), parent(parent){}
@@ -142,4 +140,68 @@ void AccountManager::onAccountSelected(int index)
         ui->inputUsername->setText(acc.username);
         ui->inputPassword->setText(acc.password);
     }
+}
+
+void AccountManager::changeText() {
+    QString nickname = ui->inputNickname->text().trimmed();
+    QString username = ui->inputUsername->text().trimmed();
+    QString password = ui->inputPassword->text().trimmed();
+
+    if (nickname.isEmpty() || username.isEmpty() || password.isEmpty() || ui->NicknameDropbox->count() == 0){
+        ui->SaveUserButton->hide();
+        return;
+    }
+
+    parent->loadJson();
+    QJsonArray accs = (*jsonData)["accounts"].toArray();
+    bool matchFound = false;
+
+    for (const QJsonValue& val : accs) {
+        QJsonObject obj = val.toObject();
+        if (obj["nickname"].toString() == nickname) {
+            matchFound = true;
+            QString storedUsername = obj["username"].toString();
+            QString storedPassword = obj["password"].toString();
+
+            if (storedUsername != username || storedPassword != password) {
+                ui->SaveUserButton->show();
+            }
+            else {
+                ui->SaveUserButton->hide();
+            }
+            break;
+        }
+    }
+
+    if (!matchFound) {
+        ui->SaveUserButton->show();
+    }
+}
+
+void AccountManager::revealText(QPushButton* button, int index) {
+    QJsonArray settings = (*jsonData)["settings"].toArray();
+    while (settings.size() < 2) settings.append("Off");
+
+    if (index == 0) {
+        bool visible = ui->inputUsername->echoMode() == QLineEdit::Normal;
+        ui->inputUsername->setEchoMode(visible ? QLineEdit::Password : QLineEdit::Normal);
+        settings[0] = visible ? "Off" : "On";
+    }
+    else if (index == 1) {
+        bool visible = ui->inputPassword->echoMode() == QLineEdit::Normal;
+        ui->inputPassword->setEchoMode(visible ? QLineEdit::Password : QLineEdit::Normal);
+        settings[1] = visible ? "Off" : "On";
+    }
+
+    if (button->text() == "On") {
+        button->setStyleSheet("background-color: red; color: white;");
+        button->setText("Off");
+    }
+    else {
+        button->setStyleSheet("background-color: green; color: white;");
+        button->setText("On");
+    }
+
+    (*jsonData)["settings"] = settings;
+    parent->saveJson();
 }

@@ -1,6 +1,4 @@
-#include "BundleManager.h"
-#include <QMessageBox>
-#include <QJsonArray>
+#include "middleSection.h"
 
 BundleManager::BundleManager(Ui::AutoLaunchWizard101CClass* uiPtr, QMap<QString, QStringList>* bundlesPtr, QJsonObject* jsonPtr, QList<AccountInfo>* accountsPtr, AutoLaunchWizard101C* parent)
     : ui(uiPtr), bundleAccounts(bundlesPtr), jsonData(jsonPtr), accounts(accountsPtr), parent(parent) {
@@ -77,7 +75,6 @@ void BundleManager::saveBundle() {
 
     if (bundleNickname.isEmpty() || massNicknames.isEmpty()) {
         parent->showStyledWarning(parent, "Input Error", "Both fields must be filled out before saving", true);
-        //QMessageBox::warning(parent, "Input Error", "Both fields must be filled out before savin");
         return;
     }
 
@@ -107,8 +104,6 @@ void BundleManager::saveBundle() {
         ui->BundleNicknameDropbox->setItemText(index, bundleNickname);
         ui->BundleNicknameDropbox->setCurrentIndex(index);
     }
-
-    //QMessageBox::information(parent, "Success", "Bundle info updated successfully");
     parent->showStyledWarning(parent, "Success", "Bundle info updated successfully", false);
 }
 
@@ -135,4 +130,38 @@ void BundleManager::saveBundlesToFile() {
     }
     (*jsonData)["bundles"] = bundles;
     parent->saveJson();
+}
+
+void BundleManager::changeText() {
+    QString bundleNickname = ui->inputBundleNickname->text().trimmed();
+    QString massNicknames = ui->inputMassNicknames->text().trimmed();
+
+    if (bundleNickname.isEmpty() || massNicknames.isEmpty() || ui->BundleNicknameDropbox->count() == 0){
+        ui->SaveBundleButton->hide();
+        return;
+	}
+
+    parent->loadJson();
+    QJsonObject bundlesObj = (*jsonData)["bundles"].toObject();
+    bool matchFound = false;
+
+    if (bundlesObj.contains(bundleNickname)) {
+        matchFound = true;
+        QJsonArray storedArray = bundlesObj[bundleNickname].toArray();
+        QStringList storedList;
+        for (const QJsonValue& val : storedArray)
+            storedList.append(val.toString());
+
+        QString storedMassNicknames = storedList.join("/");
+
+        if (storedMassNicknames != massNicknames) {
+            ui->SaveBundleButton->show();
+        }
+        else {
+            ui->SaveBundleButton->hide();
+        }
+    }
+    if (!matchFound) {
+        ui->SaveBundleButton->show();
+    }
 }

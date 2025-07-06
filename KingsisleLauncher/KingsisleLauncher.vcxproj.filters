@@ -33,10 +33,13 @@
     <QtMoc Include="AutoLaunchWizard101C.h">
       <Filter>Header Files</Filter>
     </QtMoc>
-    <QtMoc Include="AccountManager.h">
+    <QtMoc Include="topSection.h">
       <Filter>Header Files</Filter>
     </QtMoc>
-    <QtMoc Include="BundleManager.h">
+    <QtMoc Include="middleSection.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="bottomSection.h">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>
@@ -44,10 +47,13 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="AccountManager.cpp">
+    <ClCompile Include="topSection.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="BundleManager.cpp">
+    <ClCompile Include="middleSection.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="bottomSection.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

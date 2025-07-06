@@ -1,14 +1,10 @@
-#pragma once
+#ifndef TOPSECTION_H
+#define TOPSECTION_H
 
-#include <QObject>
-#include <QVector>
-#include <QJsonObject>
-#include <QList>
 #include "ui_AutoLaunchWizard101C.h"
 #include "AccountInfo.h"
-#include <QFile>
 #include "AutoLaunchWizard101C.h"
-#include <QMessageBox>
+
 class AccountManager : public QObject {
     Q_OBJECT
 public:
@@ -20,6 +16,8 @@ public slots:
     void saveUser();
     void displayTopText();
 	void onAccountSelected(int index);
+    void changeText();
+    void revealText(QPushButton* button, int index);
 
 private:
     Ui::AutoLaunchWizard101CClass* ui;
@@ -27,3 +25,5 @@ private:
     QJsonObject* jsonData;
     AutoLaunchWizard101C* parent;
 };
+
+#endif

@@ -46,25 +46,35 @@ This is used for single use login per account:
 
 `Password` - In game password
 
+`Save`     - Save the displayed data inside of data.json
+
+`On\Off`   - Hide/show username and password
+
 Launch button - used to launch the client that is currently selected in the top section dropdown
 All account information is saved and read from files stored in the /information directory. These files are automatically loaded at startup
 
 ## Middle Section
 This is used for people with many many accounts and need to sort to be sorted for certain situations. This sections allows user to store them in "Bundles" of your choosing, creating a multi launch preset.
 
-`Bundle Launch`   - used to launch the client that is currently selected in the middle section dropdown
+`Bundle Launch`   - Used to launch the client that is currently selected in the middle section dropdown
 
-`Bundle Nickname` - used as a personal preference name to remind you of which accounts are inside the bundle
+`Bundle Nickname` - Used as a personal preference name to remind you of which accounts are inside the bundle
 
-`Mass Nickname`   - This will use the nicknames from the top section to allow you to bundle accounts into 1 and launch at the same time seperated by `/`
+`List Nickname`   - This will use the nicknames from the top section to allow you to bundle accounts into 1 and launch at the same time seperated by `/`
 	eg. "StormHitter/LifeJade/IceTank/FireHitter"
 
+`Save` - Save the displayed data inside of data.json
+
 ## Bottom Section
+
+`Browse`    - Change path of wizard101/pirate101 directory if game is downloaded in a different location, the default is: `C:\ProgramData\KingsIsle Entertainment\Wizard101\Bin`
+
 `KillAll`   - Instantly **hard** terminates all running clients meaning the game doesn't finish its logout logic and on next login, the client assumes you're still in your last loaded **state**
 
 `InjectDLL` - Prompts the user to browse for a DLL file, which will then be automatically be injected into each launched client ***WORK IN PROGRESS***
 
 `Spoof`     - When enabled, the launcher will spoof HWID and IP  ***WORK IN PROGRESS***
+
 
 ## How Launch Data is Sent
 When you launch an account with the program:
@@ -72,6 +82,8 @@ When you launch an account with the program:
 2. It starts the game's executable using `CreateProcessW` from Win32 API
 3. After a short delay to allow the game to start up, it finds the main window via `FindWindowW` for input
 4. The launcher simulates keyboard input based on the users username and password
+
+make sure that the file is ran where it can directly access /information/data.json or create a shortcut to the created exe
 
 ## Work in Progress
 This project is a work in progress and will keep evolving over time (whenever I feel like it). Features are being added and changed on the fly, with only the client launcher working as of 04/05/2025

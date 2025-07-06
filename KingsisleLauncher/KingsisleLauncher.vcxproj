@@ -63,6 +63,11 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
   </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="Configuration">
     <ClCompile>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -95,9 +100,10 @@
     <QtRcc Include="AutoLaunchWizard101C.qrc" />
     <QtUic Include="AutoLaunchWizard101C.ui" />
     <QtMoc Include="AutoLaunchWizard101C.h" />
-    <ClCompile Include="AccountManager.cpp" />
+    <ClCompile Include="bottomSection.cpp" />
+    <ClCompile Include="topSection.cpp" />
     <ClCompile Include="AutoLaunchWizard101C.cpp" />
-    <ClCompile Include="BundleManager.cpp" />
+    <ClCompile Include="middleSection.cpp" />
     <ClCompile Include="main.cpp">
       <DynamicSource Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">input</DynamicSource>
       <QtMocFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(Filename).moc</QtMocFileName>
@@ -106,11 +112,12 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <QtMoc Include="AccountManager.h" />
+    <QtMoc Include="topSection.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AccountInfo.h" />
-    <QtMoc Include="BundleManager.h" />
+    <QtMoc Include="bottomSection.h" />
+    <QtMoc Include="middleSection.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">

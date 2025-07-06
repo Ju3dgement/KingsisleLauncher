@@ -1,7 +1,8 @@
 #include "AutoLaunchWizard101C.h"
 #include "ui_AutoLaunchWizard101C.h"
-#include "AccountManager.h"
-#include "BundleManager.h"
+#include "topSection.h"
+#include "middleSection.h"
+#include "bottomSection.h"
 
 AutoLaunchWizard101C::AutoLaunchWizard101C(QWidget* parent)
 {
@@ -9,109 +10,52 @@ AutoLaunchWizard101C::AutoLaunchWizard101C(QWidget* parent)
     setWindowTitle("Ju3dge Launcher");
     setWindowIcon(QIcon("images/Ju3dge.ico"));
 
+    // UI stuff I couldn't afind inside of the ui file
     ui.GameDropbox->addItem("Wizard101");
     ui.GameDropbox->addItem("Pirate101");
     ui.SaveUserButton->hide();
     ui.SaveBundleButton->hide();
-    loadAccountsFromFile();
-    loadPathsFromFile();
-    loadBundlesFromFile();
-    loadSettings();
     ui.inputWizardPath->setReadOnly(true);
     ui.SaveUserButton->setStyleSheet("background-color: green; color: white;");
     ui.SaveBundleButton->setStyleSheet("background-color: green; color: white;");
 
-    // Top section
+    // Loads data from json
+    loadAccountsFromFile();
+    loadPathsFromFile();
+    loadBundlesFromFile();
+    loadSettings();
+
+    // Top Section
     AccountManager* accountManager = new AccountManager(&ui, &accounts, &jsonData, this);
     connect(ui.AddAccountButton, &QPushButton::clicked, accountManager, &AccountManager::addAccount);
     connect(ui.DeleteAccountButton, &QPushButton::clicked, accountManager, &AccountManager::deleteAccount);
     connect(ui.SaveUserButton, &QPushButton::clicked, accountManager, &AccountManager::saveUser);
     connect(ui.NicknameDropbox, &QComboBox::activated, accountManager, &AccountManager::displayTopText);
+    connect(ui.inputNickname, &QLineEdit::textChanged, accountManager, &AccountManager::changeText);
+    connect(ui.inputUsername, &QLineEdit::textChanged, accountManager, &AccountManager::changeText);
+    connect(ui.inputPassword, &QLineEdit::textChanged, accountManager, &AccountManager::changeText);
+    connect(ui.UsernameReveal, &QPushButton::clicked, accountManager, [=]() {accountManager->revealText(ui.UsernameReveal, 0);});
+    connect(ui.PasswordReveal, &QPushButton::clicked, accountManager, [=]() {accountManager->revealText(ui.PasswordReveal, 1);});
 
-	// Middle section
+	// Middle Section
 	BundleManager* bundleManager = new BundleManager(&ui, &bundleAccounts, &jsonData, &accounts, this);
     connect(ui.AddBundleButton, &QPushButton::clicked, bundleManager, &BundleManager::addBundleAccount);
     connect(ui.DeleteBundleButton, &QPushButton::clicked, bundleManager, &BundleManager::deleteBundleAccount);
     connect(ui.SaveBundleButton, &QPushButton::clicked, bundleManager, &BundleManager::saveBundle);
     connect(ui.BundleNicknameDropbox, &QComboBox::activated, bundleManager, &BundleManager::displayMiddleText);
+    connect(ui.inputNickname, &QLineEdit::textChanged, bundleManager, &BundleManager::changeText);
+    connect(ui.inputMassNicknames, &QLineEdit::textChanged, bundleManager, &BundleManager::changeText);
 
+    // Bottom Section
+	MiscManager* miscManager = new MiscManager(&ui, &jsonData, &wizardPath, &piratePath, this);
+    connect(ui.BrowseButton, &QPushButton::clicked, miscManager, &MiscManager::browse);
+    connect(ui.killAllButton, &QPushButton::clicked, miscManager, &MiscManager::killAllClients);
+    connect(ui.SpoofButton, &QPushButton::clicked, miscManager, &MiscManager::spoof);
+    connect(ui.GameDropbox, &QComboBox::activated, miscManager, &MiscManager::gameSelect);
 
-
-    connect(ui.BrowseButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::browse);
+    // Launcher, misc, and universal
     connect(ui.LaunchButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::launch);
     connect(ui.BundleLaunchButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::bundleLaunch);
-    connect(ui.killAllButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::killAllClients);    
-    connect(ui.SpoofButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::spoof);
-    connect(ui.GameDropbox, &QComboBox::activated, this, &AutoLaunchWizard101C::gameSelect);
-    connect(ui.UsernameReveal, &QPushButton::clicked, this, [=]() {revealText(ui.UsernameReveal, 0);});
-    connect(ui.PasswordReveal, &QPushButton::clicked, this, [=]() {revealText(ui.PasswordReveal, 1);});
-    connect(ui.inputNickname, &QLineEdit::textChanged, this, [=]() {changedText(0);});
-    connect(ui.inputUsername, &QLineEdit::textChanged, this, [=]() {changedText(0);});
-    connect(ui.inputPassword, &QLineEdit::textChanged, this, [=]() {changedText(0);});
-    connect(ui.inputNickname, &QLineEdit::textChanged, this, [=]() {changedText(1);});
-    connect(ui.inputMassNicknames, &QLineEdit::textChanged, this, [=]() {changedText(1);});
-}
-
-void AutoLaunchWizard101C::changedText(int index) {
-    if (index == 0) {
-        QString nickname = ui.inputNickname->text().trimmed();
-        QString username = ui.inputUsername->text().trimmed();
-        QString password = ui.inputPassword->text().trimmed();
-
-        loadJson();
-        QJsonArray accs = jsonData["accounts"].toArray();
-        bool matchFound = false;
-
-        for (const QJsonValue& val : accs) {
-            QJsonObject obj = val.toObject();
-            if (obj["nickname"].toString() == nickname) {
-                matchFound = true;
-                QString storedUsername = obj["username"].toString();
-                QString storedPassword = obj["password"].toString();
-
-                if (storedUsername != username || storedPassword != password) {
-                    ui.SaveUserButton->show();
-                }
-                else {
-                    ui.SaveUserButton->hide();
-                }
-                break;
-            }
-        }
-
-        if (!matchFound) {
-            ui.SaveUserButton->show();
-        }
-    }
-    else if (index == 1) {
-        QString bundleNickname = ui.inputBundleNickname->text().trimmed();
-        QString massNicknames = ui.inputMassNicknames->text().trimmed();
-
-        loadJson();
-        QJsonObject bundlesObj = jsonData["bundles"].toObject();
-        bool matchFound = false;
-
-        if (bundlesObj.contains(bundleNickname)) {
-            matchFound = true;
-            QJsonArray storedArray = bundlesObj[bundleNickname].toArray();
-            QStringList storedList;
-            for (const QJsonValue& val : storedArray)
-                storedList.append(val.toString());
-
-            QString storedMassNicknames = storedList.join("/");
-
-            if (storedMassNicknames != massNicknames) {
-                ui.SaveBundleButton->show();
-            }
-            else {
-                ui.SaveBundleButton->hide();
-            }
-        }
-
-        if (!matchFound) {
-            ui.SaveBundleButton->show();
-        }
-    }
 }
 
 AutoLaunchWizard101C::~AutoLaunchWizard101C() {}
@@ -119,69 +63,19 @@ AutoLaunchWizard101C::~AutoLaunchWizard101C() {}
 void AutoLaunchWizard101C::showStyledWarning(QWidget* parent, const QString& title, const QString& text, bool warningIcon) {
     QMessageBox msgBox(parent);
     if (warningIcon) {
-        msgBox.setIcon(QMessageBox::Warning);  // warning icon
+        msgBox.setIcon(QMessageBox::Warning); 
     } else {
-        msgBox.setIcon(QMessageBox::Information);  // info icon
+        msgBox.setIcon(QMessageBox::Information); 
 	}
     msgBox.setWindowTitle(title);
     msgBox.setText(text);
-    msgBox.setStyleSheet("QLabel { color: white; }"); 
+    msgBox.setStyleSheet(
+        "QLabel { color: white; }"
+        "QPushButton { background-color: white; color: black; }"
+    );
     msgBox.exec();
 }
 
-void AutoLaunchWizard101C::killAllClients() {
-    QString targetName = "WizardGraphicalClient.exe";
-
-    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-    if (snapshot == INVALID_HANDLE_VALUE) {
-        QMessageBox::warning(this, "Error", "Failed to create process snapshot.");
-        return;
-    }
-
-    PROCESSENTRY32W entry;
-    entry.dwSize = sizeof(PROCESSENTRY32W);
-
-    bool foundAny = false;
-
-    if (Process32FirstW(snapshot, &entry)) {
-        do {
-            QString processName = QString::fromWCharArray(entry.szExeFile);
-
-            if (processName.compare(targetName, Qt::CaseInsensitive) == 0) {
-                HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, entry.th32ProcessID);
-                if (hProcess) {
-                    TerminateProcess(hProcess, 0);
-                    CloseHandle(hProcess);
-                    foundAny = true;
-                }
-            }
-
-        } while (Process32NextW(snapshot, &entry));
-    }
-
-    CloseHandle(snapshot);
-
-    if (foundAny) {
-        QMessageBox::information(this, "Done", "All Wizard101 clients have been terminated.");
-    }
-    else {
-        QMessageBox::information(this, "Info", "No Wizard101 clients are running.");
-    }
-}
-
-void AutoLaunchWizard101C::spoof() {
-    // Work in Progress
-    if (!spoofActive) {
-        spoofActive = !spoofActive;
-        ui.SpoofButton->setStyleSheet("background-color: green; color: white;");
-        ui.SpoofButton->setText("Spoof (ON)");
-    }
-    else {
-        spoofActive = !spoofActive;
-        ui.SpoofButton->setStyleSheet("background-color: red; color: white;");
-        ui.SpoofButton->setText("Spoof (OFF)");
-    }
-}
 void AutoLaunchWizard101C::launchAccount(const AccountInfo& selectedAccount, const QString& game) {
     QString exePathFixed = (game == "Wizard101") ? wizardPath : piratePath;
     if (!exePathFixed.endsWith("/Bin", Qt::CaseInsensitive)) {
@@ -223,7 +117,6 @@ void AutoLaunchWizard101C::launchAccount(const AccountInfo& selectedAccount, con
 
         std::this_thread::sleep_for(std::chrono::milliseconds(10000));
         HWND hwnd = nullptr;
-        //  window by title
         for (int i = 0; i < 50 && hwnd == nullptr; ++i) {
             hwnd = FindWindowW(nullptr, (LPCWSTR)game.utf16());
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -286,42 +179,12 @@ void AutoLaunchWizard101C::bundleLaunch() {
     }
 }
 
-void AutoLaunchWizard101C::browse(){
-    if (ui.GameDropbox->currentText() == "Wizard101") {
-        browseWizardPath();
-    } else if (ui.GameDropbox->currentText() == "Pirate101") {
-        browsePiratePath();
+void AutoLaunchWizard101C::saveJson() {
+    QFile file("information/data.json");
+    if (file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        file.write(QJsonDocument(jsonData).toJson());
+        file.close();
     }
-}
-
-void AutoLaunchWizard101C::browseWizardPath() {
-    QString dir = QFileDialog::getExistingDirectory(this, "Select Wizard101 Path");
-    if (!dir.isEmpty()) {
-        ui.inputWizardPath->setText(dir);
-        wizardPath = dir;
-        savePathsToFile();
-    }
-}
-
-void AutoLaunchWizard101C::browsePiratePath() {
-    QString dir = QFileDialog::getExistingDirectory(this, "Select Pirate101 Path");
-    if (!dir.isEmpty()) {
-        ui.inputWizardPath->setText(dir);
-        piratePath = dir;
-        savePathsToFile();
-    }
-}
-
-void AutoLaunchWizard101C::gameSelect() {
-    QString game = ui.GameDropbox->currentText();
-    if (game == "Wizard101") {
-		ui.Wizard101PathLabel->setText("Wizard101 Path");
-        ui.inputWizardPath->setText(wizardPath);
-
-    } else if (game == "Pirate101") {
-        ui.Wizard101PathLabel->setText("Pirate101 Path");
-        ui.inputWizardPath->setText(piratePath);
-	}
 }
 
 void AutoLaunchWizard101C::loadJson() {
@@ -340,14 +203,6 @@ void AutoLaunchWizard101C::loadJson() {
     QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
     jsonData = doc.object();
     file.close();
-}
-
-void AutoLaunchWizard101C::saveJson() {
-    QFile file("information/data.json");
-    if (file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-        file.write(QJsonDocument(jsonData).toJson());
-        file.close();
-    }
 }
 
 void AutoLaunchWizard101C::loadAccountsFromFile() {
@@ -374,14 +229,6 @@ void AutoLaunchWizard101C::loadPathsFromFile() {
     else if (game == "Pirate101"){
         ui.inputWizardPath->setText(piratePath);
     }
-}
-
-void AutoLaunchWizard101C::savePathsToFile() {
-    QJsonObject paths;
-    paths["wizard"] = wizardPath;
-    paths["pirate"] = piratePath;
-    jsonData["paths"] = paths;
-    saveJson();
 }
 
 void AutoLaunchWizard101C::loadBundlesFromFile() {
@@ -424,32 +271,4 @@ void AutoLaunchWizard101C::loadSettings() {
         ui.PasswordReveal->setStyleSheet("background-color: green; color: white;");
         ui.PasswordReveal->setText("On");
     }
-}
-
-void AutoLaunchWizard101C::revealText(QPushButton* button, int index) {
-    QJsonArray settings = jsonData["settings"].toArray();
-    while (settings.size() < 2) settings.append("Off");
-
-    if (index == 0) {
-        bool visible = ui.inputUsername->echoMode() == QLineEdit::Normal;
-        ui.inputUsername->setEchoMode(visible ? QLineEdit::Password : QLineEdit::Normal);
-        settings[0] = visible ? "Off" : "On";
-    }
-    else if (index == 1) {
-        bool visible = ui.inputPassword->echoMode() == QLineEdit::Normal;
-        ui.inputPassword->setEchoMode(visible ? QLineEdit::Password : QLineEdit::Normal);
-        settings[1] = visible ? "Off" : "On";
-    }
-
-    if (button->text() == "On") {
-        button->setStyleSheet("background-color: red; color: white;");
-        button->setText("Off");
-    }
-    else {
-        button->setStyleSheet("background-color: green; color: white;");
-        button->setText("On");
-    }
-
-    jsonData["settings"] = settings;
-    saveJson();
 }

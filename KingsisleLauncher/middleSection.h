@@ -1,14 +1,10 @@
-#pragma once
+#ifndef MIDDLESECTION_H
+#define MIDDLESECTION_H
 
-#include <QObject>
-#include <QVector>
-#include <QJsonObject>
-#include <QList>
 #include "ui_AutoLaunchWizard101C.h"
 #include "AccountInfo.h"
-#include <QFile>
 #include "AutoLaunchWizard101C.h"
-#include <QMessageBox>
+
 
 class BundleManager : public QObject {
     Q_OBJECT
@@ -21,6 +17,7 @@ public slots:
     void saveBundle();
     void displayMiddleText();
 	void saveBundlesToFile();
+    void changeText();
 
 private:
     Ui::AutoLaunchWizard101CClass* ui;
@@ -29,3 +26,5 @@ private:
     AutoLaunchWizard101C* parent;
     QList<AccountInfo>* accounts;
 };
+
+#endif
