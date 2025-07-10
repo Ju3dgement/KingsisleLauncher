@@ -71,7 +71,7 @@ This is used for people with many many accounts and need to sort to be sorted fo
 
 `KillAll`   - Instantly **hard** terminates all running clients meaning the game doesn't finish its logout logic and on next login, the client assumes you're still in your last loaded **state**
 
-`InjectDLL` - Prompts the user to browse for a DLL file, which will then be automatically be injected into each launched client ***WORK IN PROGRESS***
+`InjectDLL` - Prompts the user to browse for a DLL file, which will then be automatically be injected into each launched client 
 
 `Spoof`     - When enabled, the launcher will spoof HWID and IP  ***WORK IN PROGRESS***
 

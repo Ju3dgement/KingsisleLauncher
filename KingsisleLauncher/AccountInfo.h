@@ -1,4 +1,5 @@
-#pragma once
+#ifndef ACCOUNTINFO_H
+#define ACCOUNTINFO_H
 
 #include <QString>
 
@@ -12,3 +13,5 @@ struct BundleInfo {
     QString bundleNickname;
     QString massBundle;
 };
+
+#endif

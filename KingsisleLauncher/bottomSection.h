@@ -17,6 +17,8 @@ public slots:
     void spoof();
     void gameSelect();
 	void savePathsToFile();
+    void injectDLLToProcess(DWORD pid, QString& dllPath);
+    void prepareInjectDLL();
 
 private:
     Ui::AutoLaunchWizard101CClass* ui;

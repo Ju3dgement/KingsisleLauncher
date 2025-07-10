@@ -18,6 +18,7 @@ public slots:
 	void onAccountSelected(int index);
     void changeText();
     void revealText(QPushButton* button, int index);
+    void launch();
 
 private:
     Ui::AutoLaunchWizard101CClass* ui;

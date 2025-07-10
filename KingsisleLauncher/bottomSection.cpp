@@ -97,3 +97,47 @@ void MiscManager::savePathsToFile() {
     (*jsonData)["paths"] = paths;
     parent->saveJson();
 }
+
+
+void MiscManager::prepareInjectDLL() {
+    if (ui->injectDLLButton->text() == "Inject DLL") {
+        QString filePath = QFileDialog::getOpenFileName(parent, "Select DLL to Inject", "", "DLL Files (*.dll)");
+        if (!filePath.isEmpty()) {
+            parent->setDLLPath(filePath);
+            parent->showStyledWarning(parent, "DLL Selected", "DLL will be injected after game launch:\n" + filePath, false);
+            ui->injectDLLButton->setText("Clear DLL");
+            ui->injectDLLButton->setStyleSheet("background-color: green; color: white;");
+        }
+    }
+    else {
+        ui->injectDLLButton->setText("Inject DLL");
+        ui->injectDLLButton->setStyleSheet("background-color: red; color: white;");
+        parent->setDLLPath(nullptr);
+        parent->showStyledWarning(parent, "DLL Cleared!", "DLL has been cleared from launcher, if you want to remove DLL's from current client(s) you must relaunch", false);
+    }
+}
+
+void MiscManager::injectDLLToProcess(DWORD pid, QString& dllPath) {
+    HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pid);
+    if (!hProcess) return;
+
+    LPVOID allocMem = VirtualAllocEx(hProcess, nullptr, dllPath.size() * 2 + 2, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    if (!allocMem) {
+        CloseHandle(hProcess);
+        return;
+    }
+
+    WriteProcessMemory(hProcess, allocMem, dllPath.utf16(), dllPath.size() * 2, nullptr);
+
+    HANDLE hThread = CreateRemoteThread(hProcess, nullptr, 0,
+        (LPTHREAD_START_ROUTINE)LoadLibraryW, allocMem, 0, nullptr);
+
+    if (hThread) {
+        WaitForSingleObject(hThread, INFINITE);
+        CloseHandle(hThread);
+    }
+
+    VirtualFreeEx(hProcess, allocMem, 0, MEM_RELEASE);
+    CloseHandle(hProcess);
+}
+

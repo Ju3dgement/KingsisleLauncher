@@ -4,13 +4,18 @@
 #include "middleSection.h"
 #include "bottomSection.h"
 
+
+AccountManager* accountManager;
+BundleManager* bundleManager;
+MiscManager* miscManager;
+
 AutoLaunchWizard101C::AutoLaunchWizard101C(QWidget* parent)
 {
     ui.setupUi(this);
     setWindowTitle("Ju3dge Launcher");
     setWindowIcon(QIcon("images/Ju3dge.ico"));
 
-    // UI stuff I couldn't afind inside of the ui file
+    // UI stuff I couldn't find inside of the ui file
     ui.GameDropbox->addItem("Wizard101");
     ui.GameDropbox->addItem("Pirate101");
     ui.SaveUserButton->hide();
@@ -26,7 +31,7 @@ AutoLaunchWizard101C::AutoLaunchWizard101C(QWidget* parent)
     loadSettings();
 
     // Top Section
-    AccountManager* accountManager = new AccountManager(&ui, &accounts, &jsonData, this);
+    accountManager = new AccountManager(&ui, &accounts, &jsonData, this);
     connect(ui.AddAccountButton, &QPushButton::clicked, accountManager, &AccountManager::addAccount);
     connect(ui.DeleteAccountButton, &QPushButton::clicked, accountManager, &AccountManager::deleteAccount);
     connect(ui.SaveUserButton, &QPushButton::clicked, accountManager, &AccountManager::saveUser);
@@ -36,27 +41,28 @@ AutoLaunchWizard101C::AutoLaunchWizard101C(QWidget* parent)
     connect(ui.inputPassword, &QLineEdit::textChanged, accountManager, &AccountManager::changeText);
     connect(ui.UsernameReveal, &QPushButton::clicked, accountManager, [=]() {accountManager->revealText(ui.UsernameReveal, 0);});
     connect(ui.PasswordReveal, &QPushButton::clicked, accountManager, [=]() {accountManager->revealText(ui.PasswordReveal, 1);});
+    connect(ui.LaunchButton, &QPushButton::clicked, accountManager, &AccountManager::launch);
 
 	// Middle Section
-	BundleManager* bundleManager = new BundleManager(&ui, &bundleAccounts, &jsonData, &accounts, this);
+	bundleManager = new BundleManager(&ui, &bundleAccounts, &jsonData, &accounts, this);
     connect(ui.AddBundleButton, &QPushButton::clicked, bundleManager, &BundleManager::addBundleAccount);
     connect(ui.DeleteBundleButton, &QPushButton::clicked, bundleManager, &BundleManager::deleteBundleAccount);
     connect(ui.SaveBundleButton, &QPushButton::clicked, bundleManager, &BundleManager::saveBundle);
     connect(ui.BundleNicknameDropbox, &QComboBox::activated, bundleManager, &BundleManager::displayMiddleText);
     connect(ui.inputNickname, &QLineEdit::textChanged, bundleManager, &BundleManager::changeText);
     connect(ui.inputMassNicknames, &QLineEdit::textChanged, bundleManager, &BundleManager::changeText);
+    connect(ui.BundleLaunchButton, &QPushButton::clicked, bundleManager, &BundleManager::bundleLaunch);
 
     // Bottom Section
-	MiscManager* miscManager = new MiscManager(&ui, &jsonData, &wizardPath, &piratePath, this);
+	miscManager = new MiscManager(&ui, &jsonData, &wizardPath, &piratePath, this);
     connect(ui.BrowseButton, &QPushButton::clicked, miscManager, &MiscManager::browse);
     connect(ui.killAllButton, &QPushButton::clicked, miscManager, &MiscManager::killAllClients);
     connect(ui.SpoofButton, &QPushButton::clicked, miscManager, &MiscManager::spoof);
     connect(ui.GameDropbox, &QComboBox::activated, miscManager, &MiscManager::gameSelect);
-
-    // Launcher, misc, and universal
-    connect(ui.LaunchButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::launch);
-    connect(ui.BundleLaunchButton, &QPushButton::clicked, this, &AutoLaunchWizard101C::bundleLaunch);
+    connect(ui.injectDLLButton, &QPushButton::clicked, miscManager, &MiscManager::prepareInjectDLL);
+    
 }
+
 
 AutoLaunchWizard101C::~AutoLaunchWizard101C() {}
 
@@ -76,7 +82,7 @@ void AutoLaunchWizard101C::showStyledWarning(QWidget* parent, const QString& tit
     msgBox.exec();
 }
 
-void AutoLaunchWizard101C::launchAccount(const AccountInfo& selectedAccount, const QString& game) {
+void AutoLaunchWizard101C::launchAccount(AccountInfo& selectedAccount, QString& game) {
     QString exePathFixed = (game == "Wizard101") ? wizardPath : piratePath;
     if (!exePathFixed.endsWith("/Bin", Qt::CaseInsensitive)) {
         exePathFixed += "/Bin";
@@ -122,8 +128,6 @@ void AutoLaunchWizard101C::launchAccount(const AccountInfo& selectedAccount, con
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
 
-        CloseHandle(pi.hProcess);
-        CloseHandle(pi.hThread);
 
         if (hwnd) {
             for (QChar character : selectedAccount.username)
@@ -138,46 +142,25 @@ void AutoLaunchWizard101C::launchAccount(const AccountInfo& selectedAccount, con
 
             std::wstring windowTitle = selectedAccount.nickname.toStdWString();
             SetWindowTextW(hwnd, windowTitle.c_str());
+
+            // dll
+            if (!DLLPath.isEmpty()) {
+                miscManager->injectDLLToProcess(pi.dwProcessId, DLLPath);
+            }
         }
+
         else {
             QMetaObject::invokeMethod(this, [=]() {
                 QMessageBox::warning(this, "Window Not Found", QString("Could not find game window %1 after launch.").arg(selectedAccount.nickname));
                 }, Qt::QueuedConnection);
         }
-        });
-}
 
-void AutoLaunchWizard101C::launch() {
-    QString nickname = ui.NicknameDropbox->currentText();
-    if (nickname.isEmpty()) return;
-
-    auto findCreds = std::find_if(accounts.begin(), accounts.end(), [&](const AccountInfo& a) {
-        return a.nickname == nickname;
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
         });
 
-    if (findCreds == accounts.end()) return;
-
-    QString game = ui.GameDropbox->currentText();
-    launchAccount(*findCreds, game);
 }
 
-void AutoLaunchWizard101C::bundleLaunch() {
-    QString bundleName = ui.BundleNicknameDropbox->currentText();
-    if (bundleName.isEmpty() || !bundleAccounts.contains(bundleName)) return;
-
-    QString game = ui.GameDropbox->currentText(); 
-    const QStringList& nicknames = bundleAccounts[bundleName];
-
-    for (const QString& nick : nicknames) {
-        auto findCreds = std::find_if(accounts.begin(), accounts.end(), [&](const AccountInfo& a) {
-            return a.nickname == nick;
-            });
-        if (findCreds != accounts.end()) {
-			launchAccount(*findCreds, game);
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // stagger launches
-        }
-    }
-}
 
 void AutoLaunchWizard101C::saveJson() {
     QFile file("information/data.json");
@@ -235,7 +218,7 @@ void AutoLaunchWizard101C::loadBundlesFromFile() {
     ui.BundleNicknameDropbox->clear();
     bundleAccounts.clear();
     QJsonObject bundles = jsonData["bundles"].toObject();
-    for (const QString& key : bundles.keys()) {
+    for ( QString& key : bundles.keys()) {
         QStringList nicks;
         for (const QJsonValue& v : bundles[key].toArray()) {
             nicks.append(v.toString());

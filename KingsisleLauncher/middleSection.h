@@ -18,6 +18,7 @@ public slots:
     void displayMiddleText();
 	void saveBundlesToFile();
     void changeText();
+    void bundleLaunch();
 
 private:
     Ui::AutoLaunchWizard101CClass* ui;

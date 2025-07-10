@@ -165,3 +165,21 @@ void BundleManager::changeText() {
         ui->SaveBundleButton->show();
     }
 }
+
+void BundleManager::bundleLaunch() {
+    QString bundleName = ui->BundleNicknameDropbox->currentText();
+    if (bundleName.isEmpty() || !(*bundleAccounts).contains(bundleName)) return;
+
+    QString game = ui->GameDropbox->currentText();
+    QStringList& nicknames = (*bundleAccounts)[bundleName];
+
+    for (QString& nick : nicknames) {
+        auto findCreds = std::find_if(accounts->begin(), accounts->end(), [&](AccountInfo& a) {
+            return a.nickname == nick;
+            });
+        if (findCreds != accounts->end()) {
+            parent->launchAccount(*findCreds, game);
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // stagger 
+        }
+    }
+}

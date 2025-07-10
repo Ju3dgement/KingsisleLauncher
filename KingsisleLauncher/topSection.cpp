@@ -3,6 +3,7 @@
 AccountManager::AccountManager(Ui::AutoLaunchWizard101CClass* uiPtr, QList<AccountInfo>* accountsPtr, QJsonObject* jsonPtr, AutoLaunchWizard101C* parent)
     : ui(uiPtr), accounts(accountsPtr), jsonData(jsonPtr), parent(parent){}
 
+
 void AccountManager::addAccount() {
     QString nick = ui->inputNickname->text().trimmed();
     QString user = ui->inputUsername->text().trimmed();
@@ -204,4 +205,18 @@ void AccountManager::revealText(QPushButton* button, int index) {
 
     (*jsonData)["settings"] = settings;
     parent->saveJson();
+}
+
+void AccountManager::launch() {
+    QString nickname = ui->NicknameDropbox->currentText();
+    if (nickname.isEmpty()) return;
+
+    auto findCreds = std::find_if(accounts->begin(), accounts->end(), [&](AccountInfo& a) {
+        return a.nickname == nickname;
+        });
+
+    if (findCreds == accounts->end()) return;
+
+    QString game = ui->GameDropbox->currentText();
+    parent->launchAccount(*findCreds, game);
 }
